@@ -30,7 +30,8 @@ if menu == "💬 AI चैट (सवाल-जवाब)":
     else:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-8b')
+            genai.GenerativeModel('gemini-1.5-flash')
+            
 
             # चैट हिस्ट्री
             if "messages" not in st.session_state:
