@@ -1,91 +1,123 @@
 import streamlit as st
-import google.generativeai as genai
-import pandas as pd
+from openai import OpenAI
+from audio_recorder_streamlit import audio_recorder
+import io
 
-# --- 1. पेज सेटअप ---
-st.set_page_config(
-    page_title="PocketSaathi - Narendra Kashyap",
-    page_icon="🤖",
-    layout="centered"
-)
+st.set_page_config(page_title="PocketSaathi AI", page_icon="🤖", layout="centered")
 
-st.title("🤖 PocketSaathi AI")
-st.subheader("आपका अपना AI असिस्टेंट और फाइनेंस ट्रैकर")
+st.title("🤖 PocketSaathi AI Assistant")
+st.write("सवाल पूछें, फोटो बनवाएँ या बोलकर बातचीत करें!")
 
-# --- 2. AI सेटिंग्स (Gemini API) ---
-st.sidebar.title("⚙️ AI सेटिंग्स")
-api_key = st.sidebar.text_input("अपनी Gemini Key यहाँ डालें (AIza से शुरू होने वाली):", type="password")
-
-st.sidebar.markdown("---")
-st.sidebar.subheader("मेनू चुनें")
-app_mode = st.sidebar.radio("नेविगेशन", ["💬 AI चैट (सवाल-जवाब)", "💰 पॉकेट फाइनेंस ट्रैकर"])
+# Sidebar - API Key input
+api_key = st.sidebar.text_input("OpenAI API Key (sk-...):", type="password")
 
 if not api_key:
-    st.warning("⚠️ कृपया बाईं तरफ (Sidebar) अपनी पूरी लंबी Gemini API Key डालें ताकि ऐप कनेक्ट हो सके।")
+    st.info("👈 शुरुआत करने के लिए कृपया साइडबार में अपनी OpenAI API Key (`sk-...`) डालें।")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+# Session state initialization
+if "messages" not in st.session_states if hasattr(st, "session_state") else False:
+    pass
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Mode selection
+mode = st.radio("आप क्या करना चाहते हैं?", ["💬 चैट / सवाल-जवाब", "🎨 फोटो बनवाएँ (Image Generation)"], horizontal=True)
+
+# ---------------------------------------------------------
+# MODE 1: PHOTO GENERATION (DALL-E 3)
+# ---------------------------------------------------------
+if mode == "🎨 फोटो बनवाएँ (Image Generation)":
+    st.subheader("🎨 नई फोटो बनवाएँ")
+    prompt = st.text_input("कैसी फोटो बनाना चाहते हैं? (जैसे: 'A futuristic smart wallet in neon light')")
+    
+    if st.button("फोटो बनाएँ ✨"):
+        if prompt:
+            with st.spinner("आपकी फोटो बनाई जा रही है..."):
+                try:
+                    response = client.images.generate(
+                        model="dall-e-3",
+                        prompt=prompt,
+                        size="1024x1024",
+                        quality="standard",
+                        n=1,
+                    )
+                    image_url = response.data[0].url
+                    st.image(image_url, caption=prompt, use_column_width=True)
+                except Exception as e:
+                    st.error(f"फोटो बनाने में दिक्कत आई: {e}")
+        else:
+            st.warning("कृपया फोटो का विवरण (Prompt) लिखें!")
+
+# ---------------------------------------------------------
+# MODE 2: CHAT & VOICE ASSISTANT
+# ---------------------------------------------------------
 else:
-    genai.configure(api_key=api_key)
+    st.subheader("💬 PocketSaathi से बात करें")
 
-    # --- 3. AI चैट (सवाल-जवाब) मोड ---
-    if app_mode == "💬 AI चैट (सवाल-जवाब)":
-        st.markdown("### मुझसे कुछ भी पूछें")
-        
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
+    # Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"]):
-                st.markdown(message["content"])
+    st.write("---")
+    st.write("🎙️ **बोलकर सवाल पूछें (माइक पर क्लिक करें):**")
+    audio_bytes = audio_recorder(text="", recording_color="#e84c3d", neutral_color="#6aa84f", icon_size="2x")
 
-        if prompt := st.chat_input("यहाँ अपना सवाल लिखें या बोलकर टाइप करें..."):
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user"):
-                st.markdown(prompt)
+    user_text = ""
 
-            with st.chat_message("assistant"):
-                response_text = None
-                # यह आटोमैटिक सिस्टम है जो अपने आप सही मॉडल ढूंढ लेगा
-                models_to_try = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.5-pro']
-                error_msg = ""
+    # Handle Voice Input
+    if audio_bytes:
+        with st.spinner("आपकी आवाज़ सुनी जा रही है..."):
+            try:
+                audio_file = io.BytesIO(audio_bytes)
+                audio_file.name = "voice.wav"
                 
-                for m_name in models_to_try:
-                    try:
-                        m = genai.GenerativeModel(m_name)
-                        res = m.generate_content(prompt)
-                        response_text = res.text
-                        break
-                    except Exception as e:
-                        error_msg = str(e)
-                        continue
-                
-                if response_text:
-                    st.markdown(response_text)
-                    st.session_state.messages.append({"role": "assistant", "content": response_text})
-                else:
-                    st.error(f"कनेक्शन एरर: कृपया सुनिश्चित करें कि आपकी API Key सही (`AIza...`) है। (विस्तृत एरर: {error_msg})")
+                transcript = client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+                user_text = transcript.text
+                st.success(f"आपने कहा: **{user_text}**")
+            except Exception as e:
+                st.error(f"आवाज़ प्रोसेस करने में गलती हुई: {e}")
 
-    # --- 4. पॉकेट फाइनेंस ट्रैकर मोड ---
-    elif app_mode == "💰 पॉकेट फाइनेंस ट्रैकर":
-        st.markdown("### अपने खर्च और बचत यहाँ मैनेज करें")
-        
-        if "expenses" not in st.session_state:
-            st.session_state.expenses = []
+    # Handle Text Input
+    typed_text = st.chat_input("या यहाँ टाइप करके पूछें...")
+    if typed_text:
+        user_text = typed_text
 
-        with st.form("expense_form"):
-            item = st.text_input("खर्च या कमाई का नाम (जैसे: चाय, पॉकेट मनी)")
-            amount = st.number_input("राशि (₹ में)", min_value=0.0, format="%.2f")
-            exp_type = st.selectbox("प्रकार", ["खर्च (-)", "कमाई (+)"])
-            
-            submitted = st.form_submit_button("जोड़ें")
-            if submitted and item:
-                actual_amount = amount if exp_type == "कमाई (+)" else -amount
-                st.session_state.expenses.append({"item": item, "amount": actual_amount})
-                st.success("सफलतापूर्वक जुड़ गया!")
+    # Process Input (from Voice or Text)
+    if user_text:
+        st.session_state.messages.append({"role": "user", "content": user_text})
+        with st.chat_message("user"):
+            st.write(user_text)
 
-        if st.session_state.expenses:
-            df = pd.DataFrame(st.session_state.expenses)
-            st.dataframe(df, use_container_width=True)
-            total_balance = df["amount"].sum()
-            st.metric(label="कुल शेष राशि (Balance)", value=f"₹ {total_balance:.2f}")
+        with st.chat_message("assistant"):
+            with st.spinner("PocketSaathi सोच रहा है..."):
+                try:
+                    response = client.chat.completions.create(
+                        model="gpt-4o",
+                        messages=[{"role": m["role"], "content": m["content"]} for m in st.session_state.messages]
+                    )
+                    bot_reply = response.choices[0].message.content
+                    st.write(bot_reply)
+                    st.session_state.messages.append({"role": "assistant", "content": bot_reply})
+
+                    # Voice Output (Text to Speech)
+                    speech_response = client.audio.speech.create(
+                        model="tts-1",
+                        voice="alloy",
+                        input=bot_reply
+                    )
+                    st.audio(speech_response.content, format="audio/mp3")
+
+                except Exception as e:
+                    st.error(f"जवाब देने में दिक्कत आई: {e}")
+                    
             
             
             
