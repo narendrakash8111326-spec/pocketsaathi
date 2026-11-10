@@ -14,23 +14,18 @@ st.subheader("आपका अपना AI असिस्टेंट और �
 
 # --- 2. AI सेटिंग्स (Gemini API) ---
 st.sidebar.title("⚙️ AI सेटिंग्स")
-api_key = st.sidebar.text_input("अपनी Gemini API Key यहाँ डालें:", type="password")
+api_key = st.sidebar.text_input("अपनी Gemini Key यहाँ डालें (AIza से शुरू होने वाली):", type="password")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("मेनू चुनें")
 app_mode = st.sidebar.radio("नेविगेशन", ["💬 AI चैट (सवाल-जवाब)", "💰 पॉकेट फाइनेंस ट्रैकर"])
 
 if not api_key:
-    st.warning("⚠️ कृपया बाईं तरफ (Sidebar) अपनी Gemini API Key डालें ताकि ऐप सही से काम कर सके।")
+    st.warning("⚠️ कृपया बाईं तरफ (Sidebar) अपनी पूरी लंबी Gemini API Key डालें ताकि ऐप कनेक्ट हो सके।")
 else:
-    # --- 3. जेमिनी मॉडल सेट करना ---
     genai.configure(api_key=api_key)
-    try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-    except:
-        model = genai.GenerativeModel('gemini-pro')
 
-    # --- 4. AI चैट (सवाल-जवाब) मोड ---
+    # --- 3. AI चैट (सवाल-जवाब) मोड ---
     if app_mode == "💬 AI चैट (सवाल-जवाब)":
         st.markdown("### मुझसे कुछ भी पूछें")
         
@@ -47,14 +42,28 @@ else:
                 st.markdown(prompt)
 
             with st.chat_message("assistant"):
-                try:
-                    response = model.generate_content(prompt)
-                    st.markdown(response.text)
-                    st.session_state.messages.append({"role": "assistant", "content": response.text})
-                except Exception as e:
-                    st.error(f"कुछ समस्या आई: {e}")
+                response_text = None
+                # यह आटोमैटिक सिस्टम है जो अपने आप सही मॉडल ढूंढ लेगा
+                models_to_try = ['gemini-1.5-flash', 'gemini-pro', 'gemini-1.5-pro']
+                error_msg = ""
+                
+                for m_name in models_to_try:
+                    try:
+                        m = genai.GenerativeModel(m_name)
+                        res = m.generate_content(prompt)
+                        response_text = res.text
+                        break
+                    except Exception as e:
+                        error_msg = str(e)
+                        continue
+                
+                if response_text:
+                    st.markdown(response_text)
+                    st.session_state.messages.append({"role": "assistant", "content": response_text})
+                else:
+                    st.error(f"कनेक्शन एरर: कृपया सुनिश्चित करें कि आपकी API Key सही (`AIza...`) है। (विस्तृत एरर: {error_msg})")
 
-    # --- 5. पॉकेट फाइनेंस ट्रैकर मोड ---
+    # --- 4. पॉकेट फाइनेंस ट्रैकर मोड ---
     elif app_mode == "💰 पॉकेट फाइनेंस ट्रैकर":
         st.markdown("### अपने खर्च और बचत यहाँ मैनेज करें")
         
@@ -77,5 +86,6 @@ else:
             st.dataframe(df, use_container_width=True)
             total_balance = df["amount"].sum()
             st.metric(label="कुल शेष राशि (Balance)", value=f"₹ {total_balance:.2f}")
+            
             
             
