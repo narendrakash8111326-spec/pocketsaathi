@@ -1,12 +1,10 @@
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
-import json
-import os
 
 # --- 1. पेज सेटअप ---
 st.set_page_config(
-    page_title="PocketSaathi - आपका AI असिस्टेंट",
+    page_title="PocketSaathi - Narendra Kashyap",
     page_icon="🤖",
     layout="centered"
 )
@@ -25,9 +23,12 @@ app_mode = st.sidebar.radio("नेविगेशन", ["💬 AI चैट (स
 if not api_key:
     st.warning("⚠️ कृपया बाईं तरफ (Sidebar) अपनी Gemini API Key डालें ताकि ऐप सही से काम कर सके।")
 else:
-    # --- 3. जेमिनी मॉडल सेट करना (नया और सही तरीका) ---
+    # --- 3. जेमिनी मॉडल सेट करना ---
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+    except:
+        model = genai.GenerativeModel('gemini-pro')
 
     # --- 4. AI चैट (सवाल-जवाब) मोड ---
     if app_mode == "💬 AI चैट (सवाल-जवाब)":
@@ -76,4 +77,5 @@ else:
             st.dataframe(df, use_container_width=True)
             total_balance = df["amount"].sum()
             st.metric(label="कुल शेष राशि (Balance)", value=f"₹ {total_balance:.2f}")
+            
             
