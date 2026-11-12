@@ -9,7 +9,7 @@ from datetime import datetime
 
 st.set_page_config(
     page_title="Pocket Saathi",
-    page_icon="🤖",
+    page_icon="icon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
