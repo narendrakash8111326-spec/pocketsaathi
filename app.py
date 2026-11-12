@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime
+st.image("file_00000000444c82309feba61c1f5a6c5f.png", width=150)
 
 # ---------------------------------------------------------
 # POCKET SAATHI - शुरुआती ऐप ढाँचा
