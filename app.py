@@ -219,11 +219,21 @@ elif page == "💬 नई बातचीत":
     question = st.chat_input("यहाँ अपना सवाल लिखें...")
     if question:
         add_message("user", question)
-        demo_reply = (
-            "आपका सवाल Pocket Saathi तक पहुँच गया है। अभी असली AI सेवा कनेक्ट नहीं है, "
-            "इसलिए मैं वास्तविक उत्तर नहीं दे सकता। AI API जोड़ने के बाद यहाँ AI जवाब देगा।"
-        )
-        add_message("assistant", demo_reply)
+        try:
+client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+response = client.models.generate_content(
+model="gemini-3.8-flash",
+contents=(
+"तुम Pocket Saathi हो, जिसे Narendra Kashyap ने बनाया है। "
+"हमेशा मददगार और सरल हिंदी में जवाब दो।\n\n"
+f"यूजर का सवाल: {question}"
+)
+)
+ai_reply = response.text or "माफ़ कीजिए, अभी जवाब नहीं मिल पाया।"
+except Exception as e:
+ai_reply = f"माफ़ कीजिए, AI से जुड़ने में समस्या आई: {e}"
+
+        add_message("assistant", ai_reply)
         refresh_messages()
         st.rerun()
 
