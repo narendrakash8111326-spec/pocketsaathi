@@ -216,10 +216,10 @@ elif page == "💬 नई बातचीत":
             if msg["role"] == "assistant" and st.session_state.voice_reply:
                 speak_text(msg["content"])
 
-    question = st.chat_input("यहाँ अपना सवाल लिखें...")
+        question = st.chat_input("यहाँ अपना सवाल लिखें...")
     if question:
         add_message("user", question)
-                try:
+        try:
             client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
             response = client.models.generate_content(
                 model="gemini-3.8-flash",
@@ -237,6 +237,8 @@ elif page == "💬 नई बातचीत":
         add_message("assistant", ai_reply)
         refresh_messages()
         st.rerun()
+
+    st.divider()
 
     st.divider()
     st.subheader("🎤 माइक्रोफोन ऑडियो रिकॉर्डिंग")
