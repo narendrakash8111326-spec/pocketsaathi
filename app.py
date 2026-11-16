@@ -207,22 +207,25 @@ elif page == "💬 नई बातचीत":
     with top1:
         if st.button("＋ नई बातचीत"):
             clear_messages()
-            refresh_messages()
-            st.rerun()
-    refresh_messages()
+                refresh_messages()
+
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             if msg["role"] == "assistant" and st.session_state.voice_reply:
                 speak_text(msg["content"])
 
-        question = st.chat_input("यहाँ अपना सवाल लिखें...")
+    question = st.chat_input("यहाँ अपना सवाल लिखें...")
+
     if question:
         add_message("user", question)
+
         try:
-            client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+            client = genai.Client(
+                api_key=st.secrets["GEMINI_API_KEY"]
+            )
             response = client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-2.5-flash",
                 contents=(
                     "तुम Pocket Saathi हो, जिसे Narendra Kashyap ने बनाया है। "
                     "हमेशा मददगार और सरल हिंदी में जवाब दो।\n\n"
@@ -237,8 +240,6 @@ elif page == "💬 नई बातचीत":
         add_message("assistant", ai_reply)
         refresh_messages()
         st.rerun()
-
-    st.divider()
 
     st.divider()
     st.subheader("🎤 माइक्रोफोन ऑडियो रिकॉर्डिंग")
